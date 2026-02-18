@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Carbon Clash: Ultimate Celebration</title>
+<style>
+    :root {
+        --p1-color: #e53935; /* Industry Red */
+        --p2-color: #43a047; /* Nature Green */
+        --bg-color: #f4f6f8;
+        --zone-width: 14vw;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0; padding: 0;
+        width: 100vw; height: 100vh;
+        overflow: hidden;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg-color);
+        display: flex; flex-direction: column;
+        user-select: none; -webkit-user-select: none;
+    }
+
+    /* --- HUD --- */
+    #top-bar {
+        height: 14vh; background: white;
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        z-index: 100; border-bottom: 1px solid #e0e0e0;
+    }
+
+    .team-hud { width: 260px; display: flex; flex-direction: column; justify-content: center; }
+    .team-header { display: flex; flex-direction: column; align-items: flex-start; }
+    #p2-hud .team-header { align-items: flex-end; }
+
+    .team-name { font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; opacity: 0.8; }
+    .score-row { display: flex; align-items: center; gap: 15px; }
+    #p2-hud .score-row { flex-direction: row-reverse; }
+    .score-val { font-size: 2.8rem; font-weight: 900; line-height: 1; }
+    
+    .medals-container { display: flex; gap: 5px; }
+    .medal { font-size: 1.2rem; opacity: 0.1; filter: grayscale(100%); transition: all 0.4s; }
+    .medal.active { opacity: 1; filter: grayscale(0%); transform: scale(1.25); }
+
+    #p1-hud .team-name, #p1-hud .score-val { color: var(--p1-color); }
+    #p2-hud .team-name, #p2-hud .score-val { color: var(--p2-color); }
+    .winner-gold .team-name, .winner-gold .score-val { color: #ffca28 !important; }
+
+    .timer-box {
+        text-align: center; background: #2c3e50; color: white;
+        padding: 8px 20px; border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(44, 62, 80, 0.3);
+    }
+    #timer-val { font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+
+    /* --- STAGE --- */
+    #stage {
+        height: 32vh; width: 100%; position: relative;
+        background: linear-gradient(180deg, #ffffff 0%, #eceff1 100%);
+        border-bottom: 1px solid #dcdcdc; overflow: hidden;
+    }
+    #center-dashed {
+        position: absolute; top: 15%; bottom: 10%; left: 50%;
+        width: 0; border-left: 2px dashed #b0bec5; z-index: 0;
+    }
+    #rope {
+        position: absolute; top: 55%; 
+        left: calc(var(--zone-width) + 8px); right: calc(var(--zone-width) + 8px);
+        height: 6px; background: #cfd8dc; z-index: 2; border-radius: 4px;
+    }
+    .danger-zone {
+        position: absolute; top: 0; bottom: 0; width: var(--zone-width);
+        display: flex; align-items: center; justify-content: center; z-index: 1;
+    }
+    #zone-left { left: 0; background: linear-gradient(90deg, rgba(229, 57, 53, 0.08) 0%, rgba(255,255,255,0) 100%); border-right: 4px solid rgba(229, 57, 53, 0.4); }
+    #zone-right { right: 0; background: linear-gradient(-90deg, rgba(67, 160, 71, 0.08) 0%, rgba(255,255,255,0) 100%); border-left: 4px solid rgba(67, 160, 71, 0.4); }
+    
+    .zone-label {
+        writing-mode: vertical-rl; text-orientation: mixed;
+        font-weight: 900; font-size: 1.2rem; letter-spacing: 6px; opacity: 0.25;
+        white-space: nowrap;
+    }
+    #zone-left .zone-label { color: var(--p1-color); transform: rotate(180deg); }
+    #zone-right .zone-label { color: var(--p2-color); }
+
+    #marker-wrapper {
+        position: absolute; left: 50%; top: 0; bottom: 0; width: 0; 
+        z-index: 10; transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    #puck {
+        position: absolute; top: 55%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 48px; height: 48px;
+        background: white; border: 8px solid #37474f; border-radius: 50%;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    #puck::after {
+        content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: 16px; height: 16px; background: #ffa000; border-radius: 50%;
+    }
+
+    /* --- CONTROLS --- */
+    #controls { flex: 1; display: flex; width: 100%; background: white; }
+    .player-panel { flex: 1; padding: 15px 30px; display: flex; flex-direction: column; }
+    #panel-p1 { border-right: 1px solid #eee; }
+
+    .question-box {
+        min-height: 60px; display: flex; align-items: center; justify-content: center;
+        text-align: center; font-size: 1rem; font-weight: 700; color: #37474f;
+        margin-bottom: 15px; padding: 10px; background: #eceff1; border-radius: 10px;
+        line-height: 1.3;
+    }
+    .options-grid { display: flex; flex-direction: column; gap: 10px; height: 100%; }
+    .opt-btn {
+        flex: 1; padding: 0 20px; background: white; border: 2px solid #e0e6ed; border-radius: 12px;
+        cursor: pointer; font-weight: 600; font-size: 0.95rem; color: #546e7a;
+        display: flex; align-items: center; transition: transform 0.1s, border-color 0.2s;
+    }
+    .opt-btn:active { transform: translateY(2px); }
+    .key-badge {
+        background: #455a64; color: white; width: 26px; height: 26px; 
+        border-radius: 6px; display: flex; align-items: center; justify-content: center;
+        margin-right: 12px; font-weight: 700; font-size: 0.8rem;
+    }
+    .correct { background: #e8f5e9 !important; border-color: #43a047 !important; color: #2e7d32 !important; }
+    .wrong { background: #ffebee !important; border-color: #e53935 !important; color: #c62828 !important; opacity: 0.6; }
+
+    /* --- SCREENS & CONFETTI --- */
+    #start-screen, #celebration-screen {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 9999;
+    }
+    #start-screen { background: #1a1a1a; color: white; }
+    #celebration-screen {
+        background: rgba(0,0,0,0.92); backdrop-filter: blur(5px);
+        color: white; display: none; opacity: 0; transition: opacity 0.5s;
+        overflow: hidden;
+    }
+
+    .big-btn {
+        padding: 16px 50px; font-size: 1.3rem; font-weight: 800;
+        background: #ffd600; color: #263238; border: none; border-radius: 50px;
+        cursor: pointer; box-shadow: 0 0 30px rgba(255, 214, 0, 0.3);
+        margin-top: 40px; text-transform: uppercase; letter-spacing: 1.5px;
+        transition: transform 0.2s; z-index: 10001; position: relative;
+    }
+    .big-btn:hover { transform: scale(1.05); background: #ffea00; }
+
+    /* CONFETTI ANIMATION */
+    .confetti {
+        position: absolute;
+        width: 12px; height: 12px;
+        top: -20px;
+        z-index: 10000;
+        animation: fall linear forwards;
+    }
+    @keyframes fall {
+        to { transform: translateY(110vh) rotate(720deg); }
+    }
+    
+    /* WIN TEXT ANIMATION */
+    .pulse-text { animation: pulse 0.8s infinite alternate; }
+    @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
+
+</style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <h1 style="font-size: 3.5rem; margin: 0; color: #fff;">CARBON CLASH</h1>
+        <div style="color: #90a4ae; letter-spacing: 4px; margin-bottom: 50px;">SUSTAINABILITY SHOWDOWN</div>
+        <div style="display: flex; gap: 80px; margin-bottom: 30px;">
+            <div style="text-align: center;">
+                <h2 style="color: var(--p1-color); margin: 0 0 10px 0;">INDUSTRY</h2>
+                <div class="key-badge" style="width:auto; padding:6px 15px; margin:0 auto;">KEYS: A, S, D</div>
+            </div>
+            <div style="text-align: center;">
+                <h2 style="color: var(--p2-color); margin: 0 0 10px 0;">NATURE</h2>
+                <div class="key-badge" style="width:auto; padding:6px 15px; margin:0 auto;">KEYS: J, K, L</div>
+            </div>
+        </div>
+        <button class="big-btn" onclick="startGame()">Start Game</button>
+    </div>
+
+    <div id="top-bar">
+        <div id="p1-hud" class="team-hud">
+            <div class="team-header">
+                <div class="team-name">Team Industry</div>
+                <div class="score-row">
+                    <div id="p1-score" class="score-val">0</div>
+                    <div class="medals-container">
+                        <div id="p1-silver" class="medal">🥈</div>
+                        <div id="p1-gold" class="medal">🥇</div>
+                        <div id="p1-plat" class="medal">🏆</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="timer-box">
+            <div id="timer-val">60</div>
+        </div>
+        <div id="p2-hud" class="team-hud">
+            <div class="team-header">
+                <div class="team-name">Team Nature</div>
+                <div class="score-row">
+                    <div id="p2-score" class="score-val">0</div>
+                    <div class="medals-container">
+                        <div id="p2-silver" class="medal">🥈</div>
+                        <div id="p2-gold" class="medal">🥇</div>
+                        <div id="p2-plat" class="medal">🏆</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="stage">
+        <div id="center-dashed"></div>
+        <div id="rope"></div>
+        <div id="zone-left" class="danger-zone"><span class="zone-label">INDUSTRY WINS</span></div>
+        <div id="zone-right" class="danger-zone"><span class="zone-label">NATURE WINS</span></div>
+        <div id="marker-wrapper"><div id="puck"></div></div>
+    </div>
+
+    <div id="controls">
+        <div id="panel-p1" class="player-panel">
+            <div id="q1-text" class="question-box">Ready?</div>
+            <div id="opt1-area" class="options-grid"></div>
+        </div>
+        <div id="panel-p2" class="player-panel">
+            <div id="q2-text" class="question-box">Ready?</div>
+            <div id="opt2-area" class="options-grid"></div>
+        </div>
+    </div>
+
+    <div id="celebration-screen"></div>
+
+<script>
+    /* --- CONFIG --- */
+    const TIME_LIMIT = 60;
+    const ZONE_PCT = 14; 
+    const MAX_SHIFT = 50 - ZONE_PCT;
+    
+    /* --- AUDIO SYSTEM --- */
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) { console.warn("Audio error"); }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playTone(type) {
+        if (!audioCtx) return;
+        const t = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+
+        if (type === 'win') {
+            osc.frequency.setValueAtTime(880, t);
+            osc.frequency.exponentialRampToValueAtTime(1760, t + 0.1);
+            gain.gain.setValueAtTime(0.1, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.15);
+            osc.start(); osc.stop(t + 0.15);
+        } else if (type === 'loss') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, t);
+            osc.frequency.linearRampToValueAtTime(100, t + 0.2);
+            gain.gain.setValueAtTime(0.1, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.2);
+            osc.start(); osc.stop(t + 0.2);
+        } else if (type === 'coin') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1200, t);
+            osc.frequency.setValueAtTime(1800, t + 0.1);
+            gain.gain.setValueAtTime(0.1, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.4);
+            osc.start(); osc.stop(t + 0.4);
+        }
+    }
+
+    function playVictoryMusic() {
+        if (!audioCtx) return;
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const t = audioCtx.currentTime;
+        
+        // Louder Fanfare: C - E - G - High C
+        const notes = [
+            {f: 523.25, d: 0.0, l: 0.15}, 
+            {f: 659.25, d: 0.15, l: 0.15}, 
+            {f: 783.99, d: 0.30, l: 0.15}, 
+            {f: 1046.5, d: 0.45, l: 0.6}
+        ];
+        
+        notes.forEach(n => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'triangle';
+            osc.frequency.value = n.f;
+            gain.gain.setValueAtTime(0, t + n.d);
+            gain.gain.linearRampToValueAtTime(0.3, t + n.d + 0.05); // Louder (0.3)
+            gain.gain.linearRampToValueAtTime(0, t + n.d + n.l);
+            osc.start(t + n.d);
+            osc.stop(t + n.d + n.l + 0.1);
+        });
+    }
+
+    /* --- GAME LOGIC --- */
+    const QUESTIONS_DB = [
+        {q: "Goal of sustainability?", o: ["Profit", "Balance", "Waste"], a: 1},
+        {q: "Bin for apple core?", o: ["Recycle", "Compost", "Landfill"], a: 1},
+        {q: "Finite resource?", o: ["Sun", "Wind", "Coal"], a: 2},
+        {q: "3 R's Order?", o: ["Reduce Reuse Recycle", "Run Rest Run", "Read Read"], a: 0},
+        {q: "Greenhouse gas?", o: ["Oxygen", "CO2", "Argon"], a: 1},
+        {q: "Ocean pollutant?", o: ["Seaweed", "Plastic", "Sand"], a: 1},
+        {q: "Vampire Power?", o: ["Solar", "Standby Energy", "Battery"], a: 1},
+        {q: "Cleanest energy?", o: ["Gas", "Geothermal", "Oil"], a: 1},
+        {q: "Greywater is?", o: ["Sewage", "Sink Water", "Rain"], a: 1},
+        {q: "Ocean acidification?", o: ["CO2 Absorption", "Salt", "Fish"], a: 0},
+        {q: "Pacific Garbage Patch?", o: ["Reef", "Plastic Mass", "Island"], a: 1},
+        {q: "Save water?", o: ["Short showers", "Baths", "Open tap"], a: 0},
+        {q: "Solar panels use?", o: ["Photons", "Heat", "Wind"], a: 0},
+        {q: "LED bulbs?", o: ["Hot", "Efficient", "Bad"], a: 1},
+        {q: "Carbon Neutral?", o: ["Zero", "Net Zero (Offset)", "Coal"], a: 1},
+        {q: "Biodegradable?", o: ["Nylon", "Banana Peel", "Styrofoam"], a: 1},
+        {q: "Upcycling?", o: ["Breaking", "Creative Reuse", "Trashing"], a: 1},
+        {q: "Deforestation hurts?", o: ["Biodiversity", "Ozone", "Tides"], a: 0},
+        {q: "Pollinators?", o: ["Dogs", "Bees", "Fish"], a: 1},
+        {q: "Photosynthesis makes?", o: ["CO2", "Oxygen", "Nitrogen"], a: 1},
+        {q: "Carbon Footprint?", o: ["Shoe size", "Emissions", "Ash"], a: 1},
+        {q: "Fast Fashion?", o: ["Good", "High Waste", "Durable"], a: 1},
+        {q: "Greenwashing?", o: ["Eco", "Deceptive Ads", "Cleaning"], a: 1},
+        {q: "Food Miles?", o: ["Taste", "Transport Dist", "Calories"], a: 1},
+        {q: "Triple Bottom Line?", o: ["Money", "People Planet Profit", "Sales"], a: 1},
+        {q: "Scope 3?", o: ["Factory", "Supply Chain", "Power"], a: 1}
+    ];
+
+    let state = { active: false, time: TIME_LIMIT, deck: [], p1: {s:0, q:null}, p2: {s:0, q:null}, timer: null };
+
+    function startGame() {
+        try {
+            initAudio();
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('celebration-screen').style.display = 'none';
+            document.getElementById('celebration-screen').innerHTML = ''; // Clear old confetti
+
+            state.deck = JSON.parse(JSON.stringify(QUESTIONS_DB)).sort(()=>Math.random()-0.5);
+            state.active = true;
+            state.time = TIME_LIMIT;
+            state.p1.s = 0; state.p2.s = 0;
+            
+            document.querySelectorAll('.medal').forEach(m => m.classList.remove('active'));
+            document.querySelectorAll('.team-hud').forEach(h => h.classList.remove('winner-gold'));
+            updateScore();
+            loadQ(1); loadQ(2);
+
+            if(state.timer) clearInterval(state.timer);
+            state.timer = setInterval(()=>{
+                state.time--;
+                document.getElementById('timer-val').innerText = state.time;
+                if(state.time <= 0) endGame("TIME UP!");
+            }, 1000);
+        } catch (e) { console.error("Start Error:", e); }
+    }
+
+    function loadQ(pid) {
+        if(state.deck.length === 0) state.deck = JSON.parse(JSON.stringify(QUESTIONS_DB)).sort(()=>Math.random()-0.5);
+        let q = state.deck.pop();
+        let opts = [...q.o];
+        let correctTxt = opts[q.a];
+        opts.sort(() => Math.random() - 0.5);
+        
+        let qData = { q: q.q, o: opts, a: opts.indexOf(correctTxt) };
+        if(pid === 1) state.p1.q = qData; else state.p2.q = qData;
+        
+        renderQ(pid, qData);
+    }
+
+    function renderQ(pid, data) {
+        document.getElementById(`q${pid}-text`).innerText = data.q;
+        const area = document.getElementById(`opt${pid}-area`);
+        area.innerHTML = '';
+        const keys = pid === 1 ? ['A','S','D'] : ['J','K','L'];
+        data.o.forEach((txt, i) => {
+            const btn = document.createElement('div');
+            btn.className = 'opt-btn';
+            btn.id = `p${pid}-btn-${i}`;
+            btn.innerHTML = `<span class="key-badge">${keys[i]}</span> ${txt}`;
+            btn.onclick = () => handleInput(pid, i);
+            area.appendChild(btn);
+        });
+    }
+
+    function handleInput(pid, i) {
+        if(!state.active) return;
+        let pd = pid === 1 ? state.p1 : state.p2;
+        if(!pd.q) return;
+        const btn = document.getElementById(`p${pid}-btn-${i}`);
+        if(!btn || btn.classList.contains('correct')) return;
+
+        if(i === pd.q.a) {
+            btn.classList.add('correct'); playTone('win'); pd.s++;
+        } else {
+            btn.classList.add('wrong'); playTone('loss'); pd.s = Math.max(0, pd.s - 1);
+        }
+        updateScore();
+        setTimeout(() => loadQ(pid), 200);
+    }
+
+    function updateScore() {
+        document.getElementById('p1-score').innerText = state.p1.s;
+        document.getElementById('p2-score').innerText = state.p2.s;
+        checkMedal(1, state.p1.s); checkMedal(2, state.p2.s);
+
+        let diff = state.p2.s - state.p1.s;
+        let shift = diff * 3; 
+        if(shift > MAX_SHIFT) shift = MAX_SHIFT;
+        if(shift < -MAX_SHIFT) shift = -MAX_SHIFT;
+        
+        document.getElementById('marker-wrapper').style.left = (50 + shift) + "%";
+        if(shift <= -MAX_SHIFT) endGame("INDUSTRY DOMINATES!", 1);
+        else if(shift >= MAX_SHIFT) endGame("NATURE TRIUMPHS!", 2);
+    }
+
+    function checkMedal(pid, s) {
+        if(s >= 15) activate(`p${pid}`, 'silver');
+        if(s >= 25) activate(`p${pid}`, 'gold');
+        if(s >= 35) activate(`p${pid}`, 'plat');
+    }
+    function activate(p, type) {
+        const el = document.getElementById(`${p}-${type}`);
+        if(el && !el.classList.contains('active')) {
+            el.classList.add('active'); playTone('coin');
+        }
+    }
+
+    function endGame(msg, winId) {
+        if(!state.active) return;
+        state.active = false;
+        clearInterval(state.timer);
+
+        if(!winId) {
+            if(state.p1.s > state.p2.s) winId=1;
+            else if(state.p2.s > state.p1.s) winId=2;
+        }
+
+        if(winId===1) document.getElementById('p1-hud').classList.add('winner-gold');
+        else if(winId===2) document.getElementById('p2-hud').classList.add('winner-gold');
+
+        setTimeout(() => showCeleb(winId, msg), 500);
+    }
+
+    // --- CELEBRATION LOGIC (RESTORED) ---
+    function showCeleb(wid, msg) {
+        const scr = document.getElementById('celebration-screen');
+        scr.style.display = 'flex';
+        void scr.offsetWidth; 
+        scr.style.opacity = 1;
+        
+        let title="TIME UP", color="#fff", icon="⚖️";
+        if(wid===1) { title="INDUSTRY WINS"; color="var(--p1-color)"; icon="🏭"; }
+        if(wid===2) { title="NATURE WINS"; color="var(--p2-color)"; icon="🌳"; }
+
+        let pts = Math.max(state.p1.s, state.p2.s);
+        
+        scr.innerHTML = `
+            <h1 class="pulse-text" style="color:${color}; font-size: 3.5rem; margin:0; text-shadow:0 0 30px rgba(0,0,0,0.8);">${title}</h1>
+            <div style="font-size:1.5rem; margin:10px 0; font-weight:600;">${msg}</div>
+            <div class="pulse-text" style="font-size:7rem; margin:20px 0;">${icon}</div>
+            <div style="background:rgba(255,255,255,0.1); padding:15px 40px; border-radius:15px; border:1px solid rgba(255,255,255,0.2)">
+                <div style="font-size:0.8rem; letter-spacing:2px; opacity:0.8;">HIGHEST SCORE</div>
+                <div style="font-size:3rem; font-weight:800">${pts}</div>
+            </div>
+            <button class="big-btn" onclick="startGame()">PLAY AGAIN</button>
+        `;
+
+        // 1. PLAY MUSIC
+        playVictoryMusic();
+
+        // 2. GENERATE CONFETTI (RESTORED)
+        const colors = ['#f44336', '#4caf50', '#ffeb3b', '#2196f3', '#ffffff'];
+        for(let i=0; i<150; i++) { // Increased to 150 for more volume
+            const c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            c.style.left = Math.random() * 100 + 'vw';
+            c.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+            c.style.opacity = Math.random() + 0.5;
+            scr.appendChild(c);
+        }
+    }
+
+    window.onkeydown = (e) => {
+        let k = e.key.toUpperCase();
+        if(['A','S','D'].includes(k)) handleInput(1, ['A','S','D'].indexOf(k));
+        if(['J','K','L'].includes(k)) handleInput(2, ['J','K','L'].indexOf(k));
+    };
+</script>
+</body>
+</html>
